@@ -5,41 +5,64 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sync"
 )
 
 func main() {
 	files := os.Args[1:]
-	existing := existingPaths(files)
 
-	fmt.Println(existing)
+	existingSrc := existingProducer(files)
+	uriSrc := uriProducer(existingSrc)
 
-	fmt.Printf("Scanning %v files...\n", len(existing))
-
-	if len(existing) > 1 {
-		for _, filepath := range existing {
-			if uris := urisIn(filepath); uris != nil {
-				for _, uri := range uris {
-					fmt.Println(uri)
-				}
-			}
-		}
+	for uri := range uriSrc {
+		fmt.Printf("Found uri '%v'\n", uri)
 	}
 }
 
-func existingPaths(paths []string) (existing []string) {
-	existing = make([]string, 0, len(paths))
+func existingProducer(filepaths []string) <-chan string {
+	c := make(chan string, 100)
 
-	for _, path := range paths {
-		if len(path) == 0 {
-			continue
+	go func() {
+		for _, filepath := range filepaths {
+			if len(filepath) == 0 {
+				continue
+			}
+
+			if _, err := os.Stat(filepath); !os.IsNotExist(err) {
+				c <- filepath
+			}
+		}
+		close(c)
+	}()
+
+	return c
+}
+
+func uriProducer(filepathSrc <-chan string) <-chan string {
+	dest := make(chan string, 100)
+
+	go func() {
+		wg := sync.WaitGroup{}
+
+		for filepath := range filepathSrc {
+			wg.Add(1)
+
+			go func(path string) {
+				defer wg.Done()
+
+				if uris := urisIn(path); len(uris) > 0 {
+					for _, uri := range uris {
+						dest <- uri
+					}
+				}
+			}(filepath)
 		}
 
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			existing = append(existing, path)
-		}
-	}
+		wg.Wait()
+		close(dest)
+	}()
 
-	return existing
+	return dest
 }
 
 func urisIn(filepath string) (uris []string) {
