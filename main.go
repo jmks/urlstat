@@ -7,6 +7,8 @@ import (
 	"os"
 	"regexp"
 	"sync"
+
+	"github.com/fatih/color"
 )
 
 func main() {
@@ -92,11 +94,11 @@ func printStatuses(uriSrc <-chan string) {
 
 		go func(uri string) {
 			if resp, err := http.Head(uri); err != nil {
-				fmt.Printf("%v error: %v\n", uri, err)
+				color.Red("%v error: %v\n", uri, err)
 			} else {
 				defer resp.Body.Close()
-
-				fmt.Printf("%v : %v\n", resp.Status, uri)
+				colorize := statusCodePrinterFunc(resp.StatusCode)
+				fmt.Printf("%v : %v\n", colorize(resp.Status), uri)
 			}
 
 			wg.Done()
@@ -104,4 +106,15 @@ func printStatuses(uriSrc <-chan string) {
 	}
 
 	wg.Wait()
+}
+
+func statusCodePrinterFunc(code int) func(...interface{}) string {
+	switch code {
+	case 200:
+		return color.New(color.FgGreen).SprintFunc()
+	case 404:
+		return color.New(color.FgYellow).SprintFunc()
+	default:
+		return color.New(color.FgRed).SprintFunc()
+	}
 }
