@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"net/http"
 	"os"
 	"regexp"
 	"sync"
@@ -13,10 +14,7 @@ func main() {
 
 	existingSrc := existingProducer(files)
 	uriSrc := uriProducer(existingSrc)
-
-	for uri := range uriSrc {
-		fmt.Printf("Found uri '%v'\n", uri)
-	}
+	printStatuses(uriSrc)
 }
 
 func existingProducer(filepaths []string) <-chan string {
@@ -84,4 +82,26 @@ func urisIn(filepath string) (uris []string) {
 	}
 
 	return uris
+}
+
+func printStatuses(uriSrc <-chan string) {
+	wg := sync.WaitGroup{}
+
+	for uri := range uriSrc {
+		wg.Add(1)
+
+		go func(uri string) {
+			if resp, err := http.Head(uri); err != nil {
+				fmt.Printf("%v error: %v\n", uri, err)
+			} else {
+				defer resp.Body.Close()
+
+				fmt.Printf("%v : %v\n", resp.Status, uri)
+			}
+
+			wg.Done()
+		}(uri)
+	}
+
+	wg.Wait()
 }
