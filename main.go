@@ -12,15 +12,38 @@ import (
 )
 
 func main() {
-	files := os.Args[1:]
+	filepaths := getFilepaths()
 
-	existingSrc := existingProducer(files)
+	if len(filepaths) == 0 {
+		fmt.Println("No files to scan")
+		os.Exit(1)
+	}
+
+	existingSrc := filepathProducer(filepaths)
 	uriSrc := uriProducer(existingSrc)
 	printStatuses(uriSrc)
 }
 
-func existingProducer(filepaths []string) <-chan string {
-	c := make(chan string, 100)
+func getFilepaths() (filepaths []string) {
+	filepaths = os.Args[1:]
+
+	if len(filepaths) == 0 {
+		inStat, _ := os.Stdin.Stat()
+
+		if (inStat.Mode() & os.ModeCharDevice) == 0 {
+			stdinScanner := bufio.NewScanner(os.Stdin)
+
+			for stdinScanner.Scan() {
+				filepaths = append(filepaths, stdinScanner.Text())
+			}
+		}
+	}
+
+	return filepaths
+}
+
+func filepathProducer(filepaths []string) <-chan string {
+	dest := make(chan string, 100)
 
 	go func() {
 		for _, filepath := range filepaths {
@@ -29,13 +52,13 @@ func existingProducer(filepaths []string) <-chan string {
 			}
 
 			if _, err := os.Stat(filepath); !os.IsNotExist(err) {
-				c <- filepath
+				dest <- filepath
 			}
 		}
-		close(c)
+		close(dest)
 	}()
 
-	return c
+	return dest
 }
 
 func uriProducer(filepathSrc <-chan string) <-chan string {
