@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,6 +13,14 @@ import (
 )
 
 func main() {
+	onlyList := flag.Bool("list", false, "only list URIs found in files (i.e. no status check)")
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, "Usage of URIstat:")
+		flag.PrintDefaults()
+	}
+
+	flag.Parse()
+
 	filepaths := getFilepaths()
 
 	if len(filepaths) == 0 {
@@ -21,11 +30,22 @@ func main() {
 
 	existingSrc := filepathProducer(filepaths)
 	uriSrc := uriProducer(existingSrc)
-	printStatuses(uriSrc)
+
+	if *onlyList {
+		for uri := range uriSrc {
+			fmt.Println(uri)
+		}
+	} else {
+		printStatuses(uriSrc)
+	}
 }
 
 func getFilepaths() (filepaths []string) {
-	filepaths = os.Args[1:]
+	if flag.Parsed() {
+		filepaths = flag.Args()
+	} else {
+		filepaths = os.Args[1:]
+	}
 
 	if len(filepaths) == 0 {
 		inStat, _ := os.Stdin.Stat()
