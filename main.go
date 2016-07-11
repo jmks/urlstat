@@ -15,7 +15,8 @@ import (
 func main() {
 	onlyList := flag.Bool("list", false, "only list URIs found in files (i.e. no status check)")
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage of URIstat:")
+		fmt.Fprintln(os.Stderr, "Usage of URIstat: uristat [options] files...")
+		fmt.Fprintln(os.Stderr, "Options:")
 		flag.PrintDefaults()
 	}
 
@@ -25,6 +26,8 @@ func main() {
 
 	if len(filepaths) == 0 {
 		fmt.Println("No files to scan")
+		fmt.Println("")
+		flag.Usage()
 		os.Exit(1)
 	}
 
