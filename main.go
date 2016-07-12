@@ -13,28 +13,17 @@ import (
 )
 
 func main() {
-	onlyList := flag.Bool("list", false, "only list URIs found in files (i.e. no status check)")
-	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage of URIstat: uristat [options] files...")
-		fmt.Fprintln(os.Stderr, "Options:")
-		flag.PrintDefaults()
-	}
+	opts := parseOptions()
 
-	flag.Parse()
-
-	filepaths := getFilepaths()
-
-	if len(filepaths) == 0 {
-		fmt.Println("No files to scan")
-		fmt.Println("")
-		flag.Usage()
+	if !opts.isValid() {
+		opts.printError()
 		os.Exit(1)
 	}
 
-	existingSrc := filepathProducer(filepaths)
+	existingSrc := filepathProducer(opts.filepaths)
 	uriSrc := uriProducer(existingSrc)
 
-	if *onlyList {
+	if opts.ListOnly() {
 		for uri := range uriSrc {
 			fmt.Println(uri)
 		}
@@ -43,26 +32,66 @@ func main() {
 	}
 }
 
-func getFilepaths() (filepaths []string) {
-	if flag.Parsed() {
-		filepaths = flag.Args()
-	} else {
-		filepaths = os.Args[1:]
+type options struct {
+	list      *bool
+	filepaths []string
+}
+
+func (opts options) ListOnly() bool {
+	return *opts.list
+}
+
+func parseOptions() (opts options) {
+	opts.list = flag.Bool("list", false, "only list URIs found in files (i.e. no status check)")
+
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, "Usage of URIstat: uristat [options] files...")
+		fmt.Fprintln(os.Stderr, "Options:")
+		flag.PrintDefaults()
 	}
 
-	if len(filepaths) == 0 {
+	flag.Parse()
+
+	opts.populateFilepaths()
+
+	return opts
+}
+
+func (opts *options) populateFilepaths() {
+	if flag.Parsed() {
+		opts.filepaths = flag.Args()
+	} else {
+		opts.filepaths = os.Args[1:]
+	}
+
+	if len(opts.filepaths) == 0 {
 		inStat, _ := os.Stdin.Stat()
 
 		if (inStat.Mode() & os.ModeCharDevice) == 0 {
 			stdinScanner := bufio.NewScanner(os.Stdin)
 
 			for stdinScanner.Scan() {
-				filepaths = append(filepaths, stdinScanner.Text())
+				opts.filepaths = append(opts.filepaths, stdinScanner.Text())
 			}
 		}
 	}
+}
 
-	return filepaths
+func (opts options) isValid() bool {
+	if len(opts.filepaths) == 0 {
+		return false
+	}
+
+	return true
+}
+
+func (opts options) printError() {
+	if len(opts.filepaths) == 0 {
+		fmt.Fprintf(os.Stderr, "No files to scan\n")
+	}
+
+	fmt.Fprintln(os.Stderr, "")
+	flag.Usage()
 }
 
 func filepathProducer(filepaths []string) <-chan string {
