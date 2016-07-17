@@ -12,6 +12,9 @@ import (
 	"github.com/jmks/uristat/options"
 )
 
+// https://github.com/matthewrudy/regexpert/blob/master/lib/regexpert.rb
+var uriRegex = regexp.MustCompile(`(^(http|https):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(([0-9]{1,5})?\/.*)?$)`)
+
 func main() {
 	opts := options.Parse()
 
@@ -103,13 +106,10 @@ func urisIn(filepath string) (uris []string) {
 		return uris
 	}
 
-	// https://github.com/matthewrudy/regexpert/blob/master/lib/regexpert.rb
-	uriRe := regexp.MustCompile(`(^(http|https):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(([0-9]{1,5})?\/.*)?$)`)
-
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if matches := uriRe.FindAllString(line, -1); matches != nil {
+		if matches := uriRegex.FindAllString(line, -1); matches != nil {
 			uris = append(uris, matches...)
 		}
 	}
