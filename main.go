@@ -107,7 +107,8 @@ func printStatuses(uriSrc <-chan string) {
 
 		go func(uri string) {
 			if resp, err := http.Head(uri); err != nil {
-				color.Red("%v error: %v\n", uri, err)
+				redden := color.New(color.FgRed).SprintFunc()
+				fmt.Printf("%v : %v\n", redden("HTTP ERROR"), uri)
 			} else {
 				defer resp.Body.Close()
 				colorize := statusCodePrinterFunc(resp.StatusCode)
