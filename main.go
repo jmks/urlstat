@@ -20,15 +20,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	existingSrc := filepathProducer(opts.Filepaths)
-	uriSrc := uriProducer(existingSrc)
+	filepathSrc := filepathProducer(opts.Filepaths)
+	uriSrc := uriProducer(filepathSrc)
+	uniqURIs := uniqAccumulator(uriSrc)
 
 	if opts.ListOnly() {
-		for uri := range uriSrc {
+		for _, uri := range uniqURIs {
 			fmt.Println(uri)
 		}
 	} else {
-		printStatuses(uriSrc)
+		printStatuses(uniqURIs)
 	}
 }
 
@@ -78,6 +79,23 @@ func uriProducer(filepathSrc <-chan string) <-chan string {
 	return dest
 }
 
+func uniqAccumulator(src <-chan string) []string {
+	uniq := make(map[string]bool)
+
+	for str := range src {
+		uniq[str] = true
+	}
+
+	uris := make([]string, len(uniq))
+	i := 0
+	for uri := range uniq {
+		uris[i] = uri
+		i++
+	}
+
+	return uris
+}
+
 func urisIn(filepath string) (uris []string) {
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -99,10 +117,10 @@ func urisIn(filepath string) (uris []string) {
 	return uris
 }
 
-func printStatuses(uriSrc <-chan string) {
+func printStatuses(uris []string) {
 	wg := sync.WaitGroup{}
 
-	for uri := range uriSrc {
+	for _, uri := range uris {
 		wg.Add(1)
 
 		go func(uri string) {
