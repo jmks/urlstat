@@ -52,17 +52,13 @@ func (opts *Options) populateFilepaths() {
 
 // IsValid returns whether Options is valid
 func (opts Options) IsValid() bool {
-	if len(opts.Filepaths) == 0 {
-		return false
-	}
-
-	return true
+	return len(opts.Filepaths) > 0
 }
 
 // PrintError prints reason Options was invalid and usage info to stderr
 func (opts Options) PrintError() {
 	if len(opts.Filepaths) == 0 {
-		fmt.Fprintf(os.Stderr, "No files to scan\n")
+		fmt.Fprintln(os.Stderr, "No files to scan")
 	}
 
 	fmt.Fprintln(os.Stderr, "")
