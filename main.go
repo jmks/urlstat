@@ -32,7 +32,7 @@ func main() {
 			fmt.Println(uri)
 		}
 	} else {
-		printStatuses(uniqURIs)
+		printStatuses(uniqURIs, opts)
 	}
 }
 
@@ -117,7 +117,7 @@ func urisIn(filepath string) (uris []string) {
 	return uris
 }
 
-func printStatuses(uris []string) {
+func printStatuses(uris []string, opts options.Options) {
 	wg := sync.WaitGroup{}
 
 	for _, uri := range uris {
@@ -129,8 +129,11 @@ func printStatuses(uris []string) {
 				fmt.Printf("%v : %v\n", redden("HTTP ERROR"), uri)
 			} else {
 				defer resp.Body.Close()
-				colorize := statusCodePrinterFunc(resp.StatusCode)
-				fmt.Printf("%v : %v\n", colorize(resp.Status), uri)
+
+				if isStatusPrintable(resp.StatusCode, opts) {
+					colorize := statusCodePrinterFunc(resp.StatusCode)
+					fmt.Printf("%v : %v\n", colorize(resp.Status), uri)
+				}
 			}
 
 			wg.Done()
@@ -138,6 +141,10 @@ func printStatuses(uris []string) {
 	}
 
 	wg.Wait()
+}
+
+func isStatusPrintable(status int, opts options.Options) bool {
+	return (status == 200 && opts.IsOkListable()) || (status != 200 && opts.IsNotOkListable())
 }
 
 func statusCodePrinterFunc(code int) func(...interface{}) string {
