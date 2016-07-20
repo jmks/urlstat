@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"sync"
@@ -12,8 +13,9 @@ import (
 	"github.com/jmks/uristat/options"
 )
 
-// https://github.com/matthewrudy/regexpert/blob/master/lib/regexpert.rb
-var uriRegex = regexp.MustCompile(`(^(http|https):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(([0-9]{1,5})?\/.*)?$)`)
+// Regexp used to prefilter possible URLs from random text
+// Want to at least match URN-looking things like example.com, but capture anything around it
+var uriRegex = regexp.MustCompile(`\b(?:(?P<scheme>https?):\/\/)?(?P<addr>(?P<subdomain>[\w-]+)\.(?:(?:[\w-]+\.)+(?P<tld>\w{2,5}))|localhost)(?::(?P<port>\d{1,5}))?(?P<path>(?:\/[\w-]+)+)?(?:\?(?P<query>\w+=\w+(?:\&\w+=\w+)*))?(?:\#(?P<fragment>[\w-]+))?\b`)
 
 func main() {
 	opts := options.Parse()
@@ -99,22 +101,33 @@ func uniqAccumulator(src <-chan string) []string {
 	return uris
 }
 
-func urisIn(filepath string) (uris []string) {
+func urisIn(filepath string) (urls []string) {
 	file, err := os.Open(filepath)
 	if err != nil {
 		fmt.Printf("Error '%v': %v\n", filepath, err)
-		return uris
+		return urls
 	}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if matches := uriRegex.FindAllString(line, -1); matches != nil {
-			uris = append(uris, matches...)
+			for _, urlLike := range matches {
+				url, err := url.Parse(urlLike)
+				if err != nil {
+					continue
+				}
+
+				// only accept valid things like http://host.tld or "better" (i.e. with more information)
+				// TODO: Accept forms like subdomain.host.tld but with valid TLDs
+				if url.Scheme != "" {
+					urls = append(urls, url.String())
+				}
+			}
 		}
 	}
 
-	return uris
+	return urls
 }
 
 func printStatuses(uris []string, opts options.Options) {
