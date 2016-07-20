@@ -6,16 +6,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/fatih/color"
 	"github.com/jmks/uristat/options"
 )
-
-// Regexp used to prefilter possible URLs from random text
-// Want to at least match URN-looking things like example.com, but capture anything around it
-var uriRegex = regexp.MustCompile(`\b(?:(?P<scheme>https?):\/\/)?(?P<addr>(?P<subdomain>[\w-]+)\.(?:(?:[\w-]+\.)+(?P<tld>\w{2,5}))|localhost)(?::(?P<port>\d{1,5}))?(?P<path>(?:\/[\w-]+)+)?(?:\?(?P<query>\w+=\w+(?:\&\w+=\w+)*))?(?:\#(?P<fragment>[\w-]+))?\b`)
 
 func main() {
 	opts := options.Parse()
@@ -110,20 +106,23 @@ func urisIn(filepath string) (urls []string) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := scanner.Text()
-		if matches := uriRegex.FindAllString(line, -1); matches != nil {
-			for _, urlLike := range matches {
-				url, err := url.Parse(urlLike)
-				if err != nil {
-					continue
-				}
-
-				// only accept valid things like http://host.tld or "better" (i.e. with more information)
-				// TODO: Accept forms like subdomain.host.tld but with valid TLDs
-				if url.Scheme != "" {
-					urls = append(urls, url.String())
-				}
+		for _, word := range strings.Fields(scanner.Text()) {
+			u, err := url.Parse(word)
+			if err != nil {
+				continue
 			}
+
+			// only accept valid things like http://host.tld or "better" (i.e. with more information)
+			// TODO: Accept forms like subdomain.host.tld but with valid TLDs
+			if len(u.Scheme) == 0 || !strings.HasPrefix(u.Scheme, "http") {
+				continue
+			}
+
+			if len(u.Host) == 0 {
+				continue
+			}
+
+			urls = append(urls, u.String())
 		}
 	}
 
