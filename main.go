@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/fatih/color"
-	"github.com/jmks/uristat/options"
+	"github.com/jmks/urlstat/options"
 )
 
 func main() {

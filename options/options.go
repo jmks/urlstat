@@ -22,7 +22,7 @@ func Parse() (opts Options) {
 	opts.notOk = flag.Bool("no-ok", false, "list URIs with HTTP status code other than 200 OK (overrides --ok)")
 
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage of URIstat: uristat [options] files...")
+		fmt.Fprintln(os.Stderr, "Usage of URLstat: urlstat [options] files...")
 		fmt.Fprintln(os.Stderr, "Options:")
 		flag.PrintDefaults()
 	}
