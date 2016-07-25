@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,7 +23,7 @@ func main() {
 	}
 
 	filepathSrc := filepathProducer(opts.Filepaths)
-	uriSrc := uriProducer(filepathSrc)
+	uriSrc := urlProducer(filepathSrc)
 	uniqURIs := uniqAccumulator(uriSrc)
 
 	if opts.ListOnly() {
@@ -53,7 +54,7 @@ func filepathProducer(filepaths []string) <-chan string {
 	return dest
 }
 
-func uriProducer(filepathSrc <-chan string) <-chan string {
+func urlProducer(filepathSrc <-chan string) <-chan string {
 	dest := make(chan string, 100)
 
 	go func() {
@@ -65,10 +66,14 @@ func uriProducer(filepathSrc <-chan string) <-chan string {
 			go func(path string) {
 				defer wg.Done()
 
-				if uris := urisIn(path); len(uris) > 0 {
-					for _, uri := range uris {
-						dest <- uri
-					}
+				file, err := os.Open(path)
+				if err != nil {
+					fmt.Printf("Error '%v'\n", err)
+					return
+				}
+
+				for _, url := range extractURLs(file) {
+					dest <- url
 				}
 			}(filepath)
 		}
@@ -97,14 +102,10 @@ func uniqAccumulator(src <-chan string) []string {
 	return uris
 }
 
-func urisIn(filepath string) (urls []string) {
-	file, err := os.Open(filepath)
-	if err != nil {
-		fmt.Printf("Error '%v': %v\n", filepath, err)
-		return urls
-	}
+func extractURLs(source io.Reader) []string {
+	var urls []string
 
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(source)
 	for scanner.Scan() {
 		for _, word := range strings.Fields(scanner.Text()) {
 			u, err := url.Parse(word)
