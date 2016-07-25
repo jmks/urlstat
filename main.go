@@ -23,15 +23,15 @@ func main() {
 	}
 
 	filepathSrc := filepathProducer(opts.Filepaths)
-	uriSrc := urlProducer(filepathSrc)
-	uniqURIs := uniqAccumulator(uriSrc)
+	urlSrc := urlProducer(filepathSrc)
+	uniqURLs := uniqAccumulator(urlSrc)
 
 	if opts.ListOnly() {
-		for _, uri := range uniqURIs {
-			fmt.Println(uri)
+		for _, url := range uniqURLs {
+			fmt.Println(url)
 		}
 	} else {
-		printStatuses(uniqURIs, opts)
+		printStatuses(uniqURLs, opts)
 	}
 }
 
@@ -92,14 +92,14 @@ func uniqAccumulator(src <-chan string) []string {
 		uniq[str] = true
 	}
 
-	uris := make([]string, len(uniq))
+	urls := make([]string, len(uniq))
 	i := 0
-	for uri := range uniq {
-		uris[i] = uri
+	for url := range uniq {
+		urls[i] = url
 		i++
 	}
 
-	return uris
+	return urls
 }
 
 func extractURLs(source io.Reader) []string {
@@ -130,27 +130,27 @@ func extractURLs(source io.Reader) []string {
 	return urls
 }
 
-func printStatuses(uris []string, opts options.Options) {
+func printStatuses(urls []string, opts options.Options) {
 	wg := sync.WaitGroup{}
 
-	for _, uri := range uris {
+	for _, url := range urls {
 		wg.Add(1)
 
-		go func(uri string) {
-			if resp, err := http.Head(uri); err != nil {
+		go func(url string) {
+			if resp, err := http.Head(url); err != nil {
 				redden := color.New(color.FgRed).SprintFunc()
-				fmt.Printf("%v : %v\n", redden("HTTP ERROR"), uri)
+				fmt.Printf("%v : %v\n", redden("HTTP ERROR"), url)
 			} else {
 				defer resp.Body.Close()
 
 				if isStatusPrintable(resp.StatusCode, opts) {
 					colorize := statusCodePrinterFunc(resp.StatusCode)
-					fmt.Printf("%v : %v\n", colorize(resp.Status), uri)
+					fmt.Printf("%v : %v\n", colorize(resp.Status), url)
 				}
 			}
 
 			wg.Done()
-		}(uri)
+		}(url)
 	}
 
 	wg.Wait()
