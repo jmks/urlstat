@@ -152,7 +152,13 @@ func printStatuses(urls []string, opts options.Options) {
 		wg.Add(1)
 
 		go func(url string) {
-			if resp, err := http.Head(url); err != nil {
+			// treat url with prefix 'http' as URN
+			reqURL := url
+			if !strings.HasPrefix(url, "http") {
+				reqURL = fmt.Sprintf("http://%v", url)
+			}
+
+			if resp, err := http.Head(reqURL); err != nil {
 				redden := color.New(color.FgRed).SprintFunc()
 				fmt.Printf("%v : %v\n", redden("HTTP ERROR"), url)
 			} else {
