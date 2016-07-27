@@ -120,7 +120,7 @@ func extractURLs(source io.Reader) []string {
 				continue
 			}
 
-			if len(u.Host) > 0 && !tld.HasKnownTLD(u.Host) {
+			if len(u.Host) > 0 && !strings.HasPrefix(u.Host, "localhost") && !tld.HasKnownTLD(u.Host) {
 				continue
 			}
 

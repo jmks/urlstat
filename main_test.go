@@ -14,6 +14,8 @@ func TestExtractURLs(t *testing.T) {
 		"ftp://valid.uri.tld will not be extracted":                  []string{},
 		"a blank host like http:// is ignored":                       []string{},
 		"URNs like xkcd.com or mail.google.com":                      []string{"xkcd.com", "mail.google.com"},
+		"local addresses like http://localhost:9000":                 []string{"http://localhost:9000"},
+		"local addresses must have a scheme localhost:9000":          []string{},
 		// TODO: want to extract these
 		`embedded URLs like <a href="http://xkcd.com/974/"></a>`: []string{},
 		// Don't extract URI-looking things without a known TLD
