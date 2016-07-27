@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/fatih/color"
 	"github.com/jmks/urlstat/options"
+	"github.com/jmks/urlstat/tld"
 )
 
 func main() {
@@ -113,13 +115,20 @@ func extractURLs(source io.Reader) []string {
 				continue
 			}
 
-			// only accept valid things like http://host.tld or "better" (i.e. with more information)
-			// TODO: Accept forms like subdomain.host.tld but with valid TLDs
-			if len(u.Scheme) == 0 || !strings.HasPrefix(u.Scheme, "http") {
+			// skip all non-http[s]? schemes
+			if len(u.Scheme) > 0 && !strings.HasPrefix(u.Scheme, "http") {
 				continue
 			}
 
-			if len(u.Host) == 0 {
+			if len(u.Host) > 0 && !tld.HasKnownTLD(u.Host) {
+				continue
+			}
+
+			if len(u.Host) == 0 && len(u.Path) > 0 && !(looksLikeURN(u.Path) && tld.HasKnownTLD(u.Path)) {
+				continue
+			}
+
+			if len(u.Host) == 0 && len(u.Path) == 0 {
 				continue
 			}
 
@@ -128,6 +137,12 @@ func extractURLs(source io.Reader) []string {
 	}
 
 	return urls
+}
+
+var urnPattern = regexp.MustCompile(`^(?P<host>(?:\w+\.)+)(?P<tld>\w+).*`)
+
+func looksLikeURN(s string) bool {
+	return urnPattern.MatchString(s)
 }
 
 func printStatuses(urls []string, opts options.Options) {

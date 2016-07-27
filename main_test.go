@@ -12,10 +12,13 @@ func TestExtractURLs(t *testing.T) {
 		"a url https://example.com in a sentance":                    []string{"https://example.com"},
 		"http://xkcd.com twice in one sentence? http://www.xkcd.com": []string{"http://xkcd.com", "http://www.xkcd.com"},
 		"ftp://valid.uri.tld will not be extracted":                  []string{},
-		"http:// blank hosts are also not extracted":                 []string{},
+		"a blank host like http:// is ignored":                       []string{},
+		"URNs like xkcd.com or mail.google.com":                      []string{"xkcd.com", "mail.google.com"},
 		// TODO: want to extract these
-		"a URN like xkcd.com":                                []string{},
-		`embedded URLs like <a href="http://xkcd.com/974/">`: []string{},
+		`embedded URLs like <a href="http://xkcd.com/974/"></a>`: []string{},
+		// Don't extract URI-looking things without a known TLD
+		"Class.new.method": []string{},
+		"host.fakeTLD":     []string{},
 	}
 
 	for source, expected := range examples {
