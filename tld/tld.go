@@ -1,8 +1,31 @@
 package tld
 
-// IsValid returns whether the parameter is a known TLD
-func IsValid(tld string) bool {
-	return tlds[tld]
+import "strings"
+
+// HasKnownTLD returns whether the host ends with a known TLD
+// Expects host to be in format: (\w+\.)*(?P<tld>\w+)(?P<path>...)?(?P<querystring>...)?(?P<fragment>...)?
+func HasKnownTLD(host string) bool {
+	// strip any prefixes
+	tldPathSeg := strings.LastIndex(host, ".")
+	if tldPathSeg == -1 {
+		return false
+	}
+
+	tldStr := host[tldPathSeg+1:]
+	tldStr = stripAfter(tldStr, "/")
+	tldStr = stripAfter(tldStr, "#")
+	tldStr = stripAfter(tldStr, "?")
+
+	return tlds[tldStr]
+}
+
+func stripAfter(s string, sep string) string {
+	start := strings.Index(s, sep)
+	if start == -1 {
+		return s
+	}
+
+	return s[:start]
 }
 
 // source http://www.iana.org/domains/root/db

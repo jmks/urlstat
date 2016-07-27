@@ -6,18 +6,22 @@ import (
 	"github.com/jmks/urlstat/tld"
 )
 
-func TestIsValid(t *testing.T) {
+func TestHasKnownTLD(t *testing.T) {
 	examples := map[string]bool{
-		"com":         true,
-		"ca":          true,
-		"嘉里":          true,
-		"notarealtld": false,
+		"subdomain.example.com":       true,
+		"example.badtld":              false,
+		"a.b.c.嘉里":                    true,
+		"host.org/path/to/resource":   true,
+		"host.net#fragment":           true,
+		"example.badtld#withfragment": false,
+		"example.com?test=true":       true,
 	}
 
-	for tldStr, expected := range examples {
-		actual := tld.IsValid(tldStr)
+	for host, expected := range examples {
+		actual := tld.HasKnownTLD(host)
+
 		if actual != expected {
-			t.Errorf("Expected %v to be %v, but got %v", tldStr, expected, actual)
+			t.Errorf("Expected %v to be %v, but got %v", host, expected, actual)
 		}
 	}
 }
